@@ -1,0 +1,3 @@
+[submodule "collex-mobile"]
+	path = collex-mobile
+	url = https://github.com/misterRaccoon0/collex-mobile.git
