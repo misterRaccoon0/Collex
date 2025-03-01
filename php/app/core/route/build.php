@@ -6,7 +6,7 @@ use ServerException;
 class Route{
     private Route $child;
     private string $prefix;
-    private Route $_middleware;
+    private array $_middleware = array();
     private array $routes = array(
 	"GET" => array(),
 	"POST" => array(),
@@ -22,14 +22,33 @@ class Route{
     public static function create(string $prefix = "") : self {
 	return new Route($prefix);
     }
-    public function middleware(Route $middleware){
-	$route = new Route();
-	$route->middleware = $middleware;
+    public function middleware(Route $middleware) : self {
+	$route = self::create();
+	$route->_middleware = $middleware;
+	return $route;
+    }
+    public function setMiddleware(mixed $middleware) : self{
+	if(is_array($middleware))
+	    $this->_middleware = $middleware;
+	else if ($middleware instanceof Route)
+	    $this->_middleware = array($middleware);
+	else
+	    throw new ServerException("Invalid middleware");
+	return $this;
+    }
+    public function addMiddleware(mixed $middleware) : self {
+	if(is_array($middleware))
+	    array_push($this->_middleware,...$middleware);
+	else if ($middleware instanceof Route)
+	    $this->_middleware = array($middleware);
+	else
+	    throw new ServerException("Invalid middleware");
+	return $this;
     }
     public function route(mixed $route): Route{
-	if(is_string($child))
-	    $route = new Route($child);
-	else if (!$child instanceof Route)
+	if(is_string($route))
+	    $route = new Route($route);
+	else if (!$route instanceof Route)
 	    throw new ServerException("Invalid route");
 	return $route;
     }
@@ -39,36 +58,22 @@ class Route{
 	$this->child = $child;
 	return $child;
     }
-    public function middleware(mixed $middleware) : self {
-	switch(gettype($middleware)){
-	    case "array":
-		$this->_middleware = $middleware;
-		break;
-	    case "callable":
-		$this->_middleware = array($middleware);
-		break;
-	    default:
-		throw new ServerException("Invalid middleware");
-		break;
-	}
-	return $this;
-    }
     // @param string $method
     // @param callable $callback
-    private function method(string $method, callable $callback) : self {
-	array_push($this->routes->{$method}, $callback);
+    private function method(string $method, string $path, mixed $route) : self {
+	array_push($this->routes[$method][$path], $route);
 	return $this;
     }
-    public function get(callable $callback) : Route {
-	return $this->method("GET",$callback);
+    public function get(string $path, mixed $callback) : Route {
+	return $this->method("GET", $path, $callback);
     }
-    public function post(callable $callback) : Route {
-	return $this->method("POST",$callback);
+    public function post(string $path, mixed $callback) : Route {
+	return $this->method("POST", $path, $callback);
     }
-    public function put(callable $callback) : Route {
-	return $this->method("PUT",$callback);
+    public function put(string $path, mixed $callback) : Route {
+	return $this->method("PUT", $path, $callback);
     }
-    public function delete(callable $callback) : Route {
-	return $this->method("DELETE",$callback);
+    public function delete(string $path, mixed $callback) : Route {
+	return $this->method("DELETE", $path, $callback);
     }
 }
