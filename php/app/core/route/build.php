@@ -2,7 +2,9 @@
 
 namespace Core\Routing;
 use ServerException;
-
+class Middleware{
+    private Route $parent;
+};
 class Route{
     private Route $child;
     private string $prefix;
@@ -22,28 +24,8 @@ class Route{
     public static function create(string $prefix = "") : self {
 	return new Route($prefix);
     }
-    public function middleware(Route $middleware) : self {
-	$route = self::create();
-	$route->_middleware = $middleware;
-	return $route;
-    }
-    public function setMiddleware(mixed $middleware) : self{
-	if(is_array($middleware))
-	    $this->_middleware = $middleware;
-	else if ($middleware instanceof Route)
-	    $this->_middleware = array($middleware);
-	else
-	    throw new ServerException("Invalid middleware");
-	return $this;
-    }
-    public function addMiddleware(mixed $middleware) : self {
-	if(is_array($middleware))
-	    array_push($this->_middleware,...$middleware);
-	else if ($middleware instanceof Route)
-	    $this->_middleware = array($middleware);
-	else
-	    throw new ServerException("Invalid middleware");
-	return $this;
+    public function middleware(mixed middleware) : Middleware {
+
     }
     public function route(mixed $route): Route{
 	if(is_string($route))
@@ -61,7 +43,11 @@ class Route{
     // @param string $method
     // @param callable $callback
     private function method(string $method, string $path, mixed $route) : self {
-	array_push($this->routes[$method][$path], $route);
+	if($method == "*")
+	    foreach(array_keys($this->routes) as $key)
+		array_push($this->routes[$key][$path], $route);
+	else
+	    array_push($this->routes[$method][$path], $route);
 	return $this;
     }
     public function get(string $path, mixed $callback) : Route {
