@@ -4,6 +4,19 @@ namespace Core\Routing;
 use ServerException;
 class Middleware{
     private Route $parent;
+    private $target;
+    public function __construct(Route $parent)
+    {
+	$this->parent = $parent;
+    }
+    // @param string $name
+    // @param array $arguments
+    public function __call(string $name, array $arguments): Route
+    {
+	if(!is_callable("Route::$name"))
+	    throw new ServerException("$name is not a function of Route");
+	return $this->parent;
+    }
 };
 class Route{
     private Route $child;
@@ -24,8 +37,9 @@ class Route{
     public static function create(string $prefix = "") : self {
 	return new Route($prefix);
     }
-    public function middleware(mixed middleware) : Middleware {
-
+    public function middleware(mixed $middleware) : Middleware {
+	$middleware_route = new Middleware($this);
+	return $middleware_route;
     }
     public function route(mixed $route): Route{
 	if(is_string($route))
