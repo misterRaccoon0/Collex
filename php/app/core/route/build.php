@@ -2,8 +2,43 @@
 
 namespace Core\Routing;
 use ServerException;
-class Middleware{
-    private Route $parent;
+
+abstract class BaseRoute{
+    private array $routes = array(
+	"GET" => array(),
+	"POST" => array(),
+	"PUT" => array(),
+	"DELETE" => array()
+    );
+    private array $raw_route = array();
+    // @param string $method
+    // @param callable $callback
+    private function method(string $path, mixed $route, string $method = "*") : self {
+	if($method == "*")
+	    foreach(array_keys($this->routes) as $key)
+		array_push($this->routes[$key][$path], $route);
+	else
+	    array_push($this->routes[$method][$path], $route);
+	return $this;
+    }
+    public function get(string $path, mixed $callback) : self {
+	return $this->method($path, $callback, "GET");
+    }
+    public function post(string $path, mixed $callback) : self {
+	return $this->method($path, $callback, "POST");
+    }
+    public function put(string $path, mixed $callback) : self {
+	return $this->method($path, $callback, "PUT");
+    }
+    public function delete(string $path, mixed $callback) : self {
+	return $this->method($path, $callback, "DELETE");
+    }
+
+}
+
+class Middleware extends BaseRoute{
+    // @type Route | BaseRoute
+    private mixed $parent;
     private $target;
     public function __construct(Route $parent)
     {
@@ -13,21 +48,15 @@ class Middleware{
     // @param array $arguments
     public function __call(string $name, array $arguments): Route
     {
-	if(!is_callable("Route::$name"))
+	if(!is_callable($this->parent->{$name}))
 	    throw new ServerException("$name is not a function of Route");
+	call_user_func($this->parent->{$name},$arguments);
 	return $this->parent;
     }
 };
-class Route{
+class Route extends BaseRoute{
     private Route $child;
     private string $prefix;
-    private array $_middleware = array();
-    private array $routes = array(
-	"GET" => array(),
-	"POST" => array(),
-	"PUT" => array(),
-	"DELETE" => array()
-    );
     // @param string $method
     // @param string $prefix
     private function __construct(string $prefix)
@@ -53,27 +82,5 @@ class Route{
 	$child = $this->route($child);
 	$this->child = $child;
 	return $child;
-    }
-    // @param string $method
-    // @param callable $callback
-    private function method(string $method, string $path, mixed $route) : self {
-	if($method == "*")
-	    foreach(array_keys($this->routes) as $key)
-		array_push($this->routes[$key][$path], $route);
-	else
-	    array_push($this->routes[$method][$path], $route);
-	return $this;
-    }
-    public function get(string $path, mixed $callback) : Route {
-	return $this->method("GET", $path, $callback);
-    }
-    public function post(string $path, mixed $callback) : Route {
-	return $this->method("POST", $path, $callback);
-    }
-    public function put(string $path, mixed $callback) : Route {
-	return $this->method("PUT", $path, $callback);
-    }
-    public function delete(string $path, mixed $callback) : Route {
-	return $this->method("DELETE", $path, $callback);
     }
 }

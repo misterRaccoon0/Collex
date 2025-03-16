@@ -10,4 +10,5 @@ switch($_SERVER["SERVER_NAME"]){
 	$route = "web";
 	break;
 }
-app_include("src/routes/$route");
+$router = app_include("src/routes/$route");
+
